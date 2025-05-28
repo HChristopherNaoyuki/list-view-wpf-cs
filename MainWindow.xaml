@@ -1,50 +1,136 @@
 ﻿<Window x:Class="list_view_wpf_cs.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Minimal Chat"
-        Height="400"
-        Width="350"
-        MinHeight="300"
-        MinWidth="300"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:list_view_wpf_cs"
+        mc:Ignorable="d"
+        Title="Instagram Style Chat"
+        Height="600"
+        Width="400"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
         WindowStartupLocation="CenterScreen">
 
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <!-- Chat display area -->
-            <RowDefinition Height="Auto"/>
+    <!-- Define resources at the Window level -->
+    <Window.Resources>
+        <!-- Converters -->
+        <local:BoolToAlignmentConverter x:Key="AlignmentConverter"/>
+        <local:BoolToBubbleColorConverter x:Key="BubbleColorConverter"/>
+        <local:BoolToTextColorConverter x:Key="TextColorConverter"/>
+
+        <!-- Styles -->
+        <Style x:Key="InstagramButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#0095F6"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="20">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="#0077CC"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="#CCCCCC"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Border CornerRadius="10" Background="White" BorderThickness="1" BorderBrush="#DBDBDB">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="60"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="70"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0" Background="White" BorderThickness="0,0,0,1" BorderBrush="#EFEFEF">
+                <Grid>
+                    <TextBlock Text="Chat" 
+                               VerticalAlignment="Center" 
+                               HorizontalAlignment="Center"
+                               FontSize="16"
+                               FontWeight="Bold"/>
+
+                    <Button x:Name="CloseButton"
+                            Content="✕"
+                            Width="30"
+                            Height="30"
+                            HorizontalAlignment="Right"
+                            Margin="0,0,10,0"
+                            Style="{StaticResource InstagramButtonStyle}"
+                            Click="CloseButton_Click"/>
+                </Grid>
+            </Border>
+
+            <!-- Chat messages -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10" x:Name="MessagesScrollViewer">
+                <ItemsControl x:Name="MessagesContainer">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border CornerRadius="18" 
+                                    Padding="12,8"
+                                    Margin="0,5"
+                                    HorizontalAlignment="{Binding IsFromMe, Converter={StaticResource AlignmentConverter}}"
+                                    Background="{Binding IsFromMe, Converter={StaticResource BubbleColorConverter}}">
+                                <TextBlock Text="{Binding Message}" 
+                                           TextWrapping="Wrap"
+                                           FontSize="14"
+                                           Foreground="{Binding IsFromMe, Converter={StaticResource TextColorConverter}}"/>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
             <!-- Input area -->
-            <RowDefinition Height="Auto"/>
-            <!-- Send button -->
-        </Grid.RowDefinitions>
+            <Border Grid.Row="2" Background="#FAFAFA" BorderThickness="1,0,0,0" BorderBrush="#EFEFEF">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
 
-        <!-- Chat history display -->
-        <ListView
-            x:Name="ChatDisplay"
-            Grid.Row="0"
-            Background="Transparent"
-            BorderThickness="0"
-            ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+                    <!-- TextBox with placeholder simulation -->
+                    <Grid Grid.Column="0">
+                        <TextBox x:Name="MessageTextBox"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 VerticalContentAlignment="Center"
+                                 Padding="10,0"
+                                 FontSize="14"
+                                 AcceptsReturn="True"
+                                 KeyDown="MessageTextBox_KeyDown"
+                                 TextChanged="MessageTextBox_TextChanged"/>
+                        <TextBlock x:Name="PlaceholderTextBlock"
+                                   Text="Type a message..."
+                                   Margin="10,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="Gray"
+                                   Visibility="Collapsed"/>
+                    </Grid>
 
-        <!-- Message input box -->
-        <TextBox
-            x:Name="MessageInput"
-            Grid.Row="1"
-            Margin="0,10,0,0"
-            MinHeight="30"
-            Padding="5"
-            AcceptsReturn="True"
-            VerticalContentAlignment="Center"
-            TextWrapping="Wrap"
-            KeyDown="OnMessageInputKeyDown"/>
-
-        <!-- Send button -->
-        <Button
-            Grid.Row="2"
-            Margin="0,10,0,0"
-            Padding="10,5"
-            Content="Send"
-            Click="OnSendClick"
-            IsDefault="True"/>
-    </Grid>
+                    <Button x:Name="SendButton"
+                            Grid.Column="1"
+                            Content="➤"
+                            FontSize="16"
+                            Style="{StaticResource InstagramButtonStyle}"
+                            Click="SendButton_Click"
+                            IsEnabled="False"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
 </Window>

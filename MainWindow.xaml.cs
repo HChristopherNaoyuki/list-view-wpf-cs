@@ -1,123 +1,154 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Globalization;
+using System.Windows.Data;
+using System.Threading.Tasks;
 
 namespace list_view_wpf_cs
 {
-    /// <summary>
-    /// Main application window for the minimal chat interface
-    /// </summary>
     public partial class MainWindow : Window
     {
-        /// <summary>
-        /// Initializes a new instance of the MainWindow class
-        /// </summary>
         public MainWindow()
         {
             InitializeComponent();
-            InitializeChatInterface();
+            InitializeChat();
+            this.MouseLeftButtonDown += (o, e) => DragMove();
+            UpdatePlaceholderVisibility();
         }
 
-        /// <summary>
-        /// Sets up the initial state of the chat interface
-        /// </summary>
-        private void InitializeChatInterface()
+        private void InitializeChat()
         {
-            AddChatMessage("System", "Chat initialized. Type your message below.");
-            MessageInput.Focus();
+            AddMessage("Hi there!", false);
+            AddMessage("Hello! How are you?", true);
+            AddMessage("I'm good, thanks for asking. What about you?", false);
         }
 
-        /// <summary>
-        /// Handles the Send button click event
-        /// </summary>
-        private void OnSendClick(object sender, RoutedEventArgs e)
+        private void AddMessage(string text, bool isFromMe)
         {
-            ProcessAndSendMessage();
+            MessagesContainer.Items.Add(new ChatMessage
+            {
+                Message = text,
+                IsFromMe = isFromMe
+            });
+            MessagesScrollViewer.ScrollToBottom();
         }
 
-        /// <summary>
-        /// Handles key presses in the message input box
-        /// </summary>
-        private void OnMessageInputKeyDown(object sender, KeyEventArgs e)
+        private void SendButton_Click(object sender, RoutedEventArgs e)
+        {
+            SendMessage();
+        }
+
+        private void MessageTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter && !Keyboard.IsKeyDown(Key.LeftShift))
             {
-                ProcessAndSendMessage();
+                SendMessage();
                 e.Handled = true;
             }
         }
 
-        /// <summary>
-        /// Processes the current message and sends it to the chat
-        /// </summary>
-        private void ProcessAndSendMessage()
+        private void MessageTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            string userMessage = MessageInput.Text.Trim();
-
-            if (string.IsNullOrWhiteSpace(userMessage))
-            {
-                return;
-            }
-
-            AddChatMessage("You", userMessage);
-            string botResponse = GenerateBotResponse(userMessage);
-            AddChatMessage("ChatBot", botResponse);
-
-            MessageInput.Clear();
-            MessageInput.Focus();
+            SendButton.IsEnabled = !string.IsNullOrWhiteSpace(MessageTextBox.Text);
+            UpdatePlaceholderVisibility();
         }
 
-        /// <summary>
-        /// Generates an appropriate response based on the user's message
-        /// </summary>
-        /// <param name="userMessage">The message received from the user</param>
-        /// <returns>A response string from the chatbot</returns>
-        private string GenerateBotResponse(string userMessage)
+        private void UpdatePlaceholderVisibility()
         {
-            userMessage = userMessage.ToLower();
+            PlaceholderTextBlock.Visibility = string.IsNullOrEmpty(MessageTextBox.Text)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
 
-            if (userMessage.Contains("hello") || userMessage.Contains("hi"))
+        private void SendMessage()
+        {
+            string message = MessageTextBox.Text.Trim();
+            if (!string.IsNullOrWhiteSpace(message))
             {
-                return "Hello! How can I assist you today?";
+                AddMessage(message, true);
+                MessageTextBox.Clear();
+                UpdatePlaceholderVisibility();
+
+                Task.Delay(500).ContinueWith(t =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        AddMessage(GenerateReply(message), false);
+                    });
+                });
             }
-            else if (userMessage.Contains("password"))
-            {
-                return "For security reasons, I cannot discuss password matters.";
-            }
-            else if (userMessage.Contains("thank"))
-            {
-                return "You're welcome!";
-            }
-            else if (userMessage.Contains("?"))
-            {
-                return "That's an interesting question. Let me think about that...";
-            }
+        }
+
+        private string GenerateReply(string message)
+        {
+            message = message.ToLower();
+
+            if (message.Contains("hi") || message.Contains("hello"))
+                return "Hey there!";
+            else if (message.Contains("how are you"))
+                return "I'm doing great, thanks!";
+            else if (message.Contains("?"))
+                return "That's an interesting question!";
             else
-            {
-                return "I'm a simple chatbot. Could you clarify or ask something else?";
-            }
+                return "Got your message!";
         }
 
-        /// <summary>
-        /// Adds a message to the chat display with sender identification
-        /// </summary>
-        /// <param name="sender">The sender of the message</param>
-        /// <param name="message">The message content</param>
-        private void AddChatMessage(string sender, string message)
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            ChatDisplay.Items.Add($"{sender}: {message}");
-            ScrollToLatestMessage();
+            this.Close();
+        }
+    }
+
+    public class ChatMessage
+    {
+        public string Message { get; set; }
+        public bool IsFromMe { get; set; }
+    }
+
+    [ValueConversion(typeof(bool), typeof(HorizontalAlignment))]
+    public class BoolToAlignmentConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return (bool)value ? HorizontalAlignment.Right : HorizontalAlignment.Left;
         }
 
-        /// <summary>
-        /// Ensures the latest message is visible in the chat display
-        /// </summary>
-        private void ScrollToLatestMessage()
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (ChatDisplay.Items.Count > 0)
-            {
-                ChatDisplay.ScrollIntoView(ChatDisplay.Items[ChatDisplay.Items.Count - 1]);
-            }
+            throw new NotImplementedException();
+        }
+    }
+
+    [ValueConversion(typeof(bool), typeof(Brush))]
+    public class BoolToBubbleColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return (bool)value ?
+                new SolidColorBrush(Color.FromRgb(0, 149, 246)) :
+                new SolidColorBrush(Color.FromRgb(239, 239, 239));
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    [ValueConversion(typeof(bool), typeof(Brush))]
+    public class BoolToTextColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return (bool)value ? Brushes.White : Brushes.Black;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
         }
     }
 }
